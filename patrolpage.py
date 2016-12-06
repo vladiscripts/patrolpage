@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-# coding: utf-8
+# coding: utf8
+#
+# author: https://github.com/vladiscripts
+#
 import requests
 from urllib.parse import quote
 from lxml import etree
@@ -8,6 +11,8 @@ import pywikibot
 # import mwparserfromhell
 # import vladi_commons
 
+# запрос о последней правки страницы и патрулировавшем: https://ru.wikipedia.org/wiki/%D0%A1%D0%BB%D1%83%D0%B6%D0%B5%D0%B1%D0%BD%D0%B0%D1%8F:ApiSandbox#action=query&format=json&prop=revisions&titles=%D0%91%D1%83%D0%BD%D1%82+%D0%9F%D0%BE%D0%B4%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F+%D0%BF%D0%BE+%D1%81%D0%BF%D0%B5%D1%86%D0%B8%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%BC+%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F%D0%BC&utf8=1&rvprop=timestamp%7Cuser%7Ccomment%7Cids%7Cflagged&rvlimit=5
+# последнего патрулировавшего так не получить. после патруля могут быть непатрульные правки и автопатрулирование. надо перебирать номера правок страницы
 
 # не патрулировано
 # t = '''<?xml version="1.0"?><api batchcomplete=""><query><normalized><n from="Янковский,_Филипп_Олегович" to="Янковский, Филипп Олегович" /></normalized>
@@ -24,11 +29,11 @@ def page_patrolled(title):
 	q_wikiApi_base = 'https://ru.wikipedia.org/w/api.php'
 	title = normalization_pagename(str(title))
 
-	headers = {'user-agent': 'user:textworkerBot'}
+	# headers = {'user-agent': 'user:textworkerBot'}
 	# GETparameters = {'action': 'query', 'prop': 'flagged', 'format': 'xml', 'titles': quote(title)}
 	# r = requests.get(q_wikiApi_base, data=GETparameters, headers=headers)
 	url = q_wikiApi_base + '?action=query&format=xml&prop=flagged&user&utf8=1&redirects=1&titles=' + quote(title)
-	r = requests.get(url, headers)
+	r = requests.get(url)
 
 	flags = etree.fromstring(r.text)
 	if len(flags.xpath("//flagged")) == 0 or len(flags.xpath("//flagged/@pending_since")) > 0:
@@ -36,7 +41,6 @@ def page_patrolled(title):
 		return False
 	else:
 		print('патрулировано: ' + title)
-
 		return True
 
 
@@ -64,12 +68,12 @@ link_just_re = re.compile(r'\s*(\[\[(?!%s).*?\]\])' % exclude_namespaces)
 tag_li_re = re.compile(r'^[*#](.*)$', re.MULTILINE)
 header_re = re.compile(r'^==+([^=]+)==+$', re.MULTILINE)
 textend = re.compile(r'\n*$')
-is_patrolled = False
-is_autoclosing = False
 
 site = pywikibot.Site('ru', 'wikipedia')
 workpages = ['Википедия:Запросы к патрулирующим', 'Википедия:Запросы к патрулирующим от автоподтверждённых участников']
 for workpage in workpages:
+	is_patrolled = False
+	is_autoclosing = False
 	page = pywikibot.Page(site, workpage)
 	text = page.get()
 

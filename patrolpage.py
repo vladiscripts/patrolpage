@@ -8,12 +8,12 @@ from urllib.parse import quote
 from lxml import etree
 import re
 import pywikibot
-# import mwparserfromhell
 # import vladi_commons
 
-# запрос о последней правки страницы и патрулировавшем: https://ru.wikipedia.org/wiki/%D0%A1%D0%BB%D1%83%D0%B6%D0%B5%D0%B1%D0%BD%D0%B0%D1%8F:ApiSandbox#action=query&format=json&prop=revisions&titles=%D0%91%D1%83%D0%BD%D1%82+%D0%9F%D0%BE%D0%B4%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F+%D0%BF%D0%BE+%D1%81%D0%BF%D0%B5%D1%86%D0%B8%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%BC+%D0%BE%D0%BF%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F%D0%BC&utf8=1&rvprop=timestamp%7Cuser%7Ccomment%7Cids%7Cflagged&rvlimit=5
+# запрос о последней правки страницы и патрулировавшем: [[Служебная:ApiSandbox#action=query&format=json&prop=revisions&titles=Бунт+Подразделения+по+специальным+операциям&utf8=1&rvprop=timestamp|user|comment|ids|flagged&rvlimit=5]]
 # последнего патрулировавшего так не получить. после патруля могут быть непатрульные правки и автопатрулирование. надо перебирать номера правок страницы
 
+# Для тестов:
 # не патрулировано
 # t = '''<?xml version="1.0"?><api batchcomplete=""><query><normalized><n from="Янковский,_Филипп_Олегович" to="Янковский, Филипп Олегович" /></normalized>
 # 	<pages><page _idx="320695" pageid="320695" ns="0" title="Янковский, Филипп Олегович">
@@ -29,9 +29,6 @@ def page_patrolled(title):
 	q_wikiApi_base = 'https://ru.wikipedia.org/w/api.php'
 	title = normalization_pagename(str(title))
 
-	# headers = {'user-agent': 'user:textworkerBot'}
-	# GETparameters = {'action': 'query', 'prop': 'flagged', 'format': 'xml', 'titles': quote(title)}
-	# r = requests.get(q_wikiApi_base, data=GETparameters, headers=headers)
 	url = q_wikiApi_base + '?action=query&format=xml&prop=flagged&user&utf8=1&redirects=1&titles=' + quote(title)
 	r = requests.get(url)
 
@@ -105,8 +102,7 @@ for workpage in workpages:
 			if not len(links_sections):
 				is_autoclosing = True
 				# print('автоитог в секции: ' + header_re.search(section_workcopy).group(1))
-				section_workcopy = textend.sub('\n: {{отпатрулировано}} участниками. --~~~~\n',
-											   section_workcopy)  # [[У:textworkerBot | textworkerBot]]
+				section_workcopy = textend.sub('\n: {{отпатрулировано}} участниками. --~~~~\n', section_workcopy)
 
 			text = text.replace(section, section_workcopy)
 
@@ -115,5 +111,4 @@ for workpage in workpages:
 	if is_patrolled or is_autoclosing:
 		page.text = text
 		edit_comment = 'зачеркнуто отпатрулированное, автоитог' if is_autoclosing else 'зачеркнуто отпатрулированное'
-		# print('ok')
 		page.save(edit_comment)

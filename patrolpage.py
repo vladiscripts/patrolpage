@@ -27,13 +27,12 @@ def pagePatrolled(p):
 
 
 if __name__ == '__main__':
-    namespacesExcluded = r'(Special|Служебная|Участник|User|У|Обсуждение[ _]участника|ОУ|Википедия|ВП|Обсуждение[ _]Википедии|Обсуждение):'
+    namespacesExcluded = r'(?:Special|Служебная|Участник|User|У|Обсуждение[ _]участника|ОУ|Википедия|ВП|Обсуждение[ _]Википедии|Обсуждение):'
     closing_tpls = re.compile(r'\{\{([Оо]тпатрулировано|[Сс]делано|[Dd]one|[Оо]тклонено)\s*(?:\|.*?)?\}\}')
     sections_re = re.compile(r'\n={2,}[^=]+={2,}\n.*?(?=\n={2,}[^=]+={2,}\n|$)', re.DOTALL)
     linkNotStriked_re = re.compile(r'\s*(?<!<s>)\s*(\[\[(?!%s).*?\]\])' % namespacesExcluded)
     linkTitle_re = re.compile(r'\[\[([^]|]+).*?\]\]')
     link_re = re.compile(r'\s*(\[\[(?!%s).*?\]\])' % namespacesExcluded)
-    textEnd = re.compile(r'\n*$')
 
     # Параметр "user" нужен при наличии разноименных ботов на одном аккаунте tool.wmflab.org
     # В другом случае лучше его удалить
@@ -72,12 +71,10 @@ if __name__ == '__main__':
                 if not wikilinks:
                     section = section.rstrip()
                     if not redirects_found:
-                        section = textEnd.sub('\n: {{отпатрулировано}} участниками. --~~~~\n', section)
+                        section = '%s\n: {{отпатрулировано}} участниками. --~~~~\n' % section
                     else:
-                        section = textEnd.sub(
-                            '\n: {{отпатрулировано}} участниками. В запросе были перенаправления: %s. --~~~~\n' % \
-                            ', '.join(['[[%s]]' % t for t in redirects_found]),
-                            section)
+                        redirects_list = ', '.join(['[[%s]]' % t for t in redirects_found])
+                        section = '%s\n: {{отпатрулировано}} участниками. В запросе были перенаправления: %s. --~~~~\n' % section, redirects_list
                     was_closed_section = True
 
                 page_text = page_text.replace(section_original, section)

@@ -74,7 +74,8 @@ if __name__ == '__main__':
                         section = '%s\n: {{отпатрулировано}} участниками. --~~~~\n' % section
                     else:
                         redirects_list = ', '.join(['[[%s]]' % t for t in redirects_found])
-                        section = '%s\n: {{отпатрулировано}} участниками. В запросе были перенаправления: %s. --~~~~\n' % section, redirects_list
+                        section = '%s\n: {{отпатрулировано}} участниками. В запросе были перенаправления: %s. --~~~~\n' \
+                                  % (section, redirects_list)
                     was_closed_section = True
 
                 page_text = page_text.replace(section_original, section)

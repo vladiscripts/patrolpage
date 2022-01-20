@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# coding: utf8
-#
 # author: https://github.com/vladiscripts
 #
 # API's doc: https://ru.wikipedia.org/w/api.php?action=help&modules=query%2Bflagged

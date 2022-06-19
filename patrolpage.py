@@ -9,7 +9,7 @@ import pywikibot
 namespaces_excluded = r'(?:Special|Служебная|Участник|User|У|Обсуждение[ _]участника|ОУ|Википедия|ВП|Обсуждение[ _]Википедии|Обсуждение):'
 closing_tpls = re.compile(r'\{\{([Оо]тпатрулировано|[Сс]делано|[Dd]one|[Оо]тклонено)\s*(?:\|.*?)?\}\}')
 sections_re = re.compile(r'\n={2,}[^=]+={2,}\n.*?(?=\n={2,}[^=]+={2,}\n|$)', flags=re.DOTALL)
-link_not_striked_re = re.compile(r'\s*(?<!<s>)\s*(\[\[(?!%s).*?\]\])' % namespaces_excluded)  # не зачёркнутая ссылка
+link_not_striked_re = re.compile(r'\s*(?<!<s>)\s*(\[\[(?!%s).*?\]\])' % namespaces_excluded, flags=re.I)  # не зачёркнутая ссылка
 link_title_re = re.compile(r'\[\[([^]|]+).*?\]\]')  # заголовок целевой страницы из ссылки
 link_re = re.compile(r'\s*(\[\[(?!%s).*?\]\])' % namespaces_excluded)
 

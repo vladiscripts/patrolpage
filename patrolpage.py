@@ -103,6 +103,7 @@ def main():
 
 
 def test():
+    d = PageData()
     page_text = """
 == <s>[[Когурё]]</s> ==
 
@@ -110,10 +111,13 @@ def test():
 * {{Отказано}} Править можно и без подтверждения. А сейчас в статье куча проблем - такое не патрулируется. --[[У:EstherColeman|<span style="color:#000000;font-family:Segoe Script;">Esther Coleman</span>]] <sup>[[ОУ:EstherColeman|обс.]]</sup> 06:51, 19 января 2022 (UTC)  
     """
     sections = [s for s in sections_re.findall(page_text)]
-    d = SectionProcessing()
-    # d.section = sections[0]
-    section = links_processing(sections[0])
-    section = section_closing(section)
+    for section in sections:
+        if link_re.search(section) and not closing_tpls.search(section):
+            section_original = section
+            d, section = links_processing(d, section)
+            d, section = section_closing(d, section)
+            page_text = page_text.replace(section_original, section)
+            pass
     pass
 
 

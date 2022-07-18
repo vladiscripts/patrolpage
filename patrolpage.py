@@ -32,7 +32,7 @@ def check_page_patrolled(p):
         return True
 
 
-def links_processing(d, section, redirects):
+def section_links_processing(d, section, redirects):
     """ Проверка ссылок в разделе, зачёркивание """
     wikilink_not_striked = link_not_striked_re.findall(section)  # не зачёркнутые викиссылки
     for link in wikilink_not_striked:
@@ -41,7 +41,7 @@ def links_processing(d, section, redirects):
         is_patrolled = check_page_patrolled(page_properties)
         if is_patrolled:
             # ссылка отпатрулирована, зачёркиваем
-            d.patrolled_page_found = True
+            d.is_patrolled_page_found = True
             section = section.replace(link, '<s>%s</s>' % link)
         if 'redirect' in page_properties:
             # ссылка является перенаправлением
@@ -61,17 +61,16 @@ def section_closing(d, section, redirects):
         if not redirects:
             section = '%s\n: {{отпатрулировано}} участниками. --~~~~\n' % section
         else:
-            redirects_list = ', '.join(['[[%s]]' % t for t in redirects])
             section = '%s\n: {{отпатрулировано}} участниками. В запросе были перенаправления: %s. --~~~~\n' \
-                      % (section, redirects_list)
-        d.section_closed = True
+                      % (section, ', '.join(['[[%s]]' % t for t in redirects]))
+        d.is_section_closed = True
     return d, section
 
 
 class PageData:
     def __init__(self):
-        self.patrolled_page_found = False
-        self.section_closed = False
+        self.is_patrolled_page_found = False
+        self.is_section_closed = False
 
 
 def main():
@@ -91,14 +90,14 @@ def main():
             if link_re.search(section) and not closing_tpls.search(section):
                 redirects = set()
                 section_original = section
-                d, section, redirects = links_processing(d, section, redirects)
+                d, section, redirects = section_links_processing(d, section, redirects)
                 d, section = section_closing(d, section, redirects)
                 page_text = page_text.replace(section_original, section)
 
         # Постинг
-        if d.patrolled_page_found or d.section_closed:
+        if d.is_patrolled_page_found or d.is_section_closed:
             page.text = page_text
-            summary = 'зачеркнуто отпатрулированное, автоитог' if d.section_closed else 'зачеркнуто отпатрулированное'
+            summary = 'зачеркнуто отпатрулированное, автоитог' if d.is_section_closed else 'зачеркнуто отпатрулированное'
             page.save(summary)
 
 
@@ -115,7 +114,7 @@ def test():
         if link_re.search(section) and not closing_tpls.search(section):
             redirects = set()
             section_original = section
-            d, section, redirects = links_processing(d, section, redirects)
+            d, section, redirects = section_links_processing(d, section, redirects)
             d, section = section_closing(d, section, redirects)
             page_text = page_text.replace(section_original, section)
             pass

@@ -24,7 +24,7 @@ def get_pagedata_from_api(title):
 
 
 def check_page_patrolled(p):
-    if not 'flagged' in p or 'pending_since' in p['flagged']:
+    if 'flagged' not in p or 'pending_since' in p['flagged']:
         # print('не патрулировано: ' + title)
         return False
     else:
@@ -78,7 +78,8 @@ def main():
     # В другом случае лучше его удалить
     site = pywikibot.Site('ru', 'wikipedia', user='TextworkerBot')
     workpages = ['Википедия:Запросы к патрулирующим',
-                 'Википедия:Запросы к патрулирующим от автоподтверждённых участников']
+                 'Википедия:Запросы к патрулирующим от автоподтверждённых участников',
+                 'Википедия:Запросы к патрулирующим от бота']
     for workpage in workpages:
         page = pywikibot.Page(site, workpage)
         page_text = page.get()

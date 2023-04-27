@@ -78,8 +78,7 @@ def main():
     # В другом случае лучше его удалить
     site = pywikibot.Site('ru', 'wikipedia', user='TextworkerBot')
     workpages = ['Википедия:Запросы к патрулирующим',
-                 'Википедия:Запросы к патрулирующим от автоподтверждённых участников',
-                 'Википедия:Запросы к патрулирующим от бота']
+                 'Википедия:Запросы к патрулирующим от автоподтверждённых участников']
     for workpage in workpages:
         page = pywikibot.Page(site, workpage)
         page_text = page.get()

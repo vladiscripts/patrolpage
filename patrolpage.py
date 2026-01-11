@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # author: https://github.com/vladiscripts
-#
-# API's doc: https://ru.wikipedia.org/w/api.php?action=help&modules=query%2Bflagged
 import requests
 import re
 import pywikibot
@@ -13,17 +11,20 @@ link_not_striked_re = re.compile(r'\s*(?<!<s>)\s*(\[\[(?!%s).*?\]\])' % namespac
 link_title_re = re.compile(r'\[\[([^]|]+).*?\]\]')  # заголовок целевой страницы из ссылки
 link_re = re.compile(r'\s*(\[\[(?!%s).*?\]\])' % namespaces_excluded)
 
+s = requests.Session()
+s.headers = {'User-Agent': '[[w:ru:User:TextworkerBot]] / page revision checker'}
+
 
 def get_pagedata_from_api(title):
     # https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=flagged|info&utf8=1&titles=ЗАГЛАВИЕ_СТРАНИЦЫ
-    params = {'action': 'query', 'prop': 'flagged|info', 'titles': title,
-              'format': 'json', 'utf8': 1, }  # 'redirects': 1
-    r = requests.get(url='https://ru.wikipedia.org/w/api.php', params=params)
+    params = {'action': 'query', 'prop': 'flagged|info', 'titles': title, 'format': 'json', 'utf8': 1, }  # 'redirects': 1
+    r = s.get(url='https://ru.wikipedia.org/w/api.php', params=params)
     for page_info in r.json()['query']['pages'].values():
         return page_info
 
 
 def check_page_patrolled(p):
+    """ API's doc: https://ru.wikipedia.org/w/api.php?action=help&modules=query%2Bflagged """
     if 'flagged' not in p or 'pending_since' in p['flagged']:
         # print('не патрулировано: ' + title)
         return False
@@ -50,7 +51,7 @@ def section_links_processing(d, section, redirects):
 
 
 def section_closing(d, section, redirects):
-    """ Закрытие разделов с отработанными запросами """
+    """ Установка шаблона {{отпатрулировано}} в раздел где все ссылки отпатрулированы """
     wikilink_not_striked = link_not_striked_re.findall(section)
     if wikilink_not_striked:
         # есть не зачёркнутые (не отпатрулированные) викиссылки в разделе, ничего не делаем
@@ -80,6 +81,7 @@ def main():
     workpages = ['Википедия:Запросы к патрулирующим',
                  'Википедия:Запросы к патрулирующим от автоподтверждённых участников']
     for workpage in workpages:
+        # Загрузка страницы запросов
         page = pywikibot.Page(site, workpage)
         page_text = page.get()
         d = ForumPageChangedStatus()
@@ -87,11 +89,12 @@ def main():
         # Проверка разделов
         sections = [section for section in sections_re.findall(page_text)]
         for section in sections:
-            if link_re.search(section) and not closing_tpls.search(section):
+            if link_re.search(section):
                 redirects = set()
                 section_original = section
                 d, section, redirects = section_links_processing(d, section, redirects)
-                d, section = section_closing(d, section, redirects)
+                if not closing_tpls.search(section):
+                    d, section = section_closing(d, section, redirects)
                 page_text = page_text.replace(section_original, section)
 
         # Постинг
@@ -122,11 +125,12 @@ def test():
     """
     sections = [s for s in sections_re.findall(page_text)]
     for section in sections:
-        if link_re.search(section) and not closing_tpls.search(section):
+        if link_re.search(section):
             redirects = set()
             section_original = section
             d, section, redirects = section_links_processing(d, section, redirects)
-            d, section = section_closing(d, section, redirects)
+            if not closing_tpls.search(section):
+                d, section = section_closing(d, section, redirects)
             page_text = page_text.replace(section_original, section)
             pass
     pass

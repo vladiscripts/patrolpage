@@ -16,12 +16,17 @@ s = requests.Session()
 s.headers = {'User-Agent': '[[w:ru:User:TextworkerBot]] / page revision checker'}
 
 
-def get_pagedata_from_api(title):
-    # https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=flagged|info&utf8=1&titles=ЗАГЛАВИЕ_СТРАНИЦЫ
-    params = {'action': 'query', 'prop': 'flagged|info', 'titles': title, 'format': 'json', 'utf8': 1, }  # 'redirects': 1
+def get_pagesdata_from_api(titles: str | list):
+    # https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=flagged|info&utf8=1&titles=ЗАГЛАВИЕ  # или ЗАГЛАВИЕ1|ЗАГЛАВИЕ2
+    titles = '|'.join(titles) if isinstance(titles, list) else [titles]
+    params = {'action': 'query', 'prop': 'flagged|info', 'titles': titles, 'format': 'json', 'utf8': 1, }  # 'redirects': 1
     r = s.get(url='https://ru.wikipedia.org/w/api.php', params=params)
-    for page_info in r.json()['query']['pages'].values():
-        return page_info
+    j = r.json()['query'].get('pages').values()
+    if not j:
+        print("нет ['query']['pages'] в " + r.request.url)
+        return None
+    pages_info = {i['title']: i for i in j}
+    return pages_info
 
 
 def check_page_patrolled(p):
@@ -34,13 +39,32 @@ def check_page_patrolled(p):
         return True
 
 
+def first_char_to_lowercase(text):
+    return text[0].lower() + text[1:] if text else ''
+
+
+def title_normalize(text):
+    title = link_title_re.match(text).group(1).replace('_', ' ').strip()
+    return title[0].upper() + title[1:] if title else ''
+
+
 def section_links_processing(d, section, redirects):
     """ Проверка ссылок в разделе, зачёркивание """
     wikilink_not_striked = link_not_striked_re.findall(section)  # не зачёркнутые викиссылки
+    if not wikilink_not_striked:
+        return d, section, redirects
+    titles = [title_normalize(link) for link in wikilink_not_striked]
+    page_properties = get_pagesdata_from_api(titles)
+    if not page_properties:
+        return d, section, redirects
+
     for link in wikilink_not_striked:
-        title = link_title_re.match(link).group(1)
-        page_properties = get_pagedata_from_api(title)
-        is_patrolled = check_page_patrolled(page_properties)
+        title = title_normalize(link)
+        page_info = page_properties.get(title)
+        if not page_info:
+            print(f'не найден title "{title}" в page_properties')
+            continue
+        is_patrolled = check_page_patrolled(page_info)
         if is_patrolled:
             # ссылка отпатрулирована, зачёркиваем
             d.is_patrolled_page_found = True

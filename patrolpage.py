@@ -30,7 +30,7 @@ def get_pagesdata_from_api(titles: str | list):
     return pages_info
 
 
-def check_page_patrolled(p):
+def check_page_patrolled(p: dict) -> bool:
     """ API's doc: https://ru.wikipedia.org/w/api.php?action=help&modules=query%2Bflagged """
     if 'flagged' not in p or 'pending_since' in p['flagged']:
         # print('не патрулировано: ' + title)
@@ -40,11 +40,11 @@ def check_page_patrolled(p):
         return True
 
 
-def first_char_to_lowercase(text):
+def first_char_to_lowercase(text) -> str:
     return text[0].lower() + text[1:] if text else ''
 
 
-def title_normalize(text):
+def title_normalize(text) -> str:
     title = link_title_re.match(text).group(1).replace('_', ' ').strip()
     return title[0].upper() + title[1:] if title else ''
 

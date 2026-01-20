@@ -8,7 +8,8 @@ namespaces_excluded = r'(?:Special|Служебная|Участник|User|У|U
 interwiki_prefix = r':?[a-z]+?:'
 closing_tpls = re.compile(r'\{\{([Оо]тпатрулировано|[Пп]атр|[Сс]делано|[Dd]one|[Оо]тклонено)\s*(?:\|.*?)?\}\}')
 sections_re = re.compile(r'\n={2,}[^=]+={2,}\n.*?(?=\n={2,}[^=]+={2,}\n|$)', flags=re.DOTALL)
-link_not_striked_re = re.compile(r'\s*(?<!<s>)\s*(\[\[(?!%s)(?!%s).*?\]\])' % (interwiki_prefix, namespaces_excluded), flags=re.I)  # не зачёркнутая ссылка
+clean_all_striked = re.compile(r'<s>.*?</s>', flags=re.DOTALL | re.I)  # Удаляем всё, что внутри <s> ... </s>
+# link_not_striked_re = re.compile(r'\s*(?<!<s>)\s*(\[\[(?!%s)(?!%s).*?\]\])' % (interwiki_prefix, namespaces_excluded), flags=re.I)  # не зачёркнутая ссылка
 link_title_re = re.compile(r'\[\[([^]|]+).*?\]\]')  # заголовок целевой страницы из ссылки
 link_re = re.compile(r'\s*(\[\[(?!%s)(?!%s).*?\]\])' % (interwiki_prefix, namespaces_excluded), flags=re.I)
 
@@ -48,9 +49,15 @@ def title_normalize(text):
     return title[0].upper() + title[1:] if title else ''
 
 
+def get_links_not_striked(text) -> list[str]:
+    text_cleaned = clean_all_striked.sub('', text)
+    links = link_re.findall(text_cleaned)
+    return links
+
+
 def section_links_processing(d, section, redirects):
     """ Проверка ссылок в разделе, зачёркивание """
-    wikilink_not_striked = link_not_striked_re.findall(section)  # не зачёркнутые викиссылки
+    wikilink_not_striked = get_links_not_striked(section)  # не зачёркнутые викиссылки
     if not wikilink_not_striked:
         return d, section, redirects
     titles = [title_normalize(link) for link in wikilink_not_striked]
@@ -77,7 +84,7 @@ def section_links_processing(d, section, redirects):
 
 def section_closing(d, section, redirects):
     """ Установка шаблона {{отпатрулировано}} в раздел где все ссылки отпатрулированы """
-    wikilink_not_striked = link_not_striked_re.findall(section)
+    wikilink_not_striked = get_links_not_striked(section)
     if wikilink_not_striked:
         # есть не зачёркнутые (не отпатрулированные) викиссылки в разделе, ничего не делаем
         pass

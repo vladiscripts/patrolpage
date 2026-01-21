@@ -76,7 +76,7 @@ def section_links_processing(d, section, redirects):
             # ссылка отпатрулирована, зачёркиваем
             d.is_patrolled_page_found = True
             section = section.replace(link, '<s>%s</s>' % link)
-        if 'redirect' in page_properties:
+        if 'redirect' in page_info:
             # ссылка является перенаправлением
             redirects.add(title)
     return d, section, redirects

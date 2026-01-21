@@ -13,14 +13,20 @@ clean_all_striked = re.compile(r'<s>.*?</s>', flags=re.DOTALL | re.I)  # Уда�
 link_title_re = re.compile(r'\[\[([^]|]+).*?\]\]')  # заголовок целевой страницы из ссылки
 link_re = re.compile(r'\s*(\[\[(?!%s)(?!%s).*?\]\])' % (interwiki_prefix, namespaces_excluded), flags=re.I)
 
+
+class ForumPageChangedStatus:
+    def __init__(self):
+        self.is_patrolled_page_found = False
+        self.is_section_closed = False
+
+
 s = requests.Session()
 s.headers = {'User-Agent': '[[w:ru:User:TextworkerBot]] / page revision checker'}
 
 
-def get_pagesdata_from_api(titles: str | list):
-    # https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=flagged|info&utf8=1&titles=ЗАГЛАВИЕ  # или ЗАГЛАВИЕ1|ЗАГЛАВИЕ2
-    titles = '|'.join(titles) if isinstance(titles, list) else [titles]
-    params = {'action': 'query', 'prop': 'flagged|info', 'titles': titles, 'format': 'json', 'utf8': 1, }  # 'redirects': 1
+def get_pagesdata_from_api(titles: list[str]) -> dict | None:
+    """ https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=flagged|info&utf8=1&titles=ЗАГЛАВИЕ  # или ЗАГЛАВИЕ1|ЗАГЛАВИЕ2 """
+    params = {'action': 'query', 'prop': 'flagged|info', 'titles': '|'.join(titles), 'format': 'json', 'utf8': 1, }  # 'redirects': 1
     r = s.get(url='https://ru.wikipedia.org/w/api.php', params=params)
     j = r.json()['query'].get('pages').values()
     if not j:
@@ -30,7 +36,7 @@ def get_pagesdata_from_api(titles: str | list):
     return pages_info
 
 
-def check_page_patrolled(p: dict) -> bool:
+def is_page_patrolled(p: dict) -> bool:
     """ API's doc: https://ru.wikipedia.org/w/api.php?action=help&modules=query%2Bflagged """
     if 'flagged' not in p or 'pending_since' in p['flagged']:
         # print('не патрулировано: ' + title)
@@ -38,10 +44,6 @@ def check_page_patrolled(p: dict) -> bool:
     else:
         # print('патрулировано: ' + title)
         return True
-
-
-def first_char_to_lowercase(text) -> str:
-    return text[0].lower() + text[1:] if text else ''
 
 
 def title_normalize(text) -> str:
@@ -55,7 +57,7 @@ def get_links_not_striked(text) -> list[str]:
     return links
 
 
-def section_links_processing(d, section, redirects):
+def section_links_processing(d: ForumPageChangedStatus, section: str, redirects: set) -> tuple[ForumPageChangedStatus, str, set]:
     """ Проверка ссылок в разделе, зачёркивание """
     wikilink_not_striked = get_links_not_striked(section)  # не зачёркнутые викиссылки
     if not wikilink_not_striked:
@@ -71,8 +73,7 @@ def section_links_processing(d, section, redirects):
         if not page_info:
             print(f'не найден title "{title}" в page_properties')
             continue
-        is_patrolled = check_page_patrolled(page_info)
-        if is_patrolled:
+        if is_page_patrolled(page_info):
             # ссылка отпатрулирована, зачёркиваем
             d.is_patrolled_page_found = True
             section = section.replace(link, '<s>%s</s>' % link)
@@ -82,7 +83,7 @@ def section_links_processing(d, section, redirects):
     return d, section, redirects
 
 
-def section_closing(d, section, redirects):
+def section_closing(d: ForumPageChangedStatus, section: str, redirects: set) -> tuple[ForumPageChangedStatus, str]:
     """ Установка шаблона {{отпатрулировано}} в раздел где все ссылки отпатрулированы """
     wikilink_not_striked = get_links_not_striked(section)
     if wikilink_not_striked:
@@ -100,15 +101,7 @@ def section_closing(d, section, redirects):
     return d, section
 
 
-class ForumPageChangedStatus:
-    def __init__(self):
-        self.is_patrolled_page_found = False
-        self.is_section_closed = False
-
-
 def main():
-    # Параметр "user" нужен при наличии разноименных ботов на одном аккаунте tool.wmflab.org
-    # В другом случае лучше его удалить
     site = pywikibot.Site('ru', 'wikipedia', user='TextworkerBot')
     workpages = ['Википедия:Запросы к патрулирующим',
                  'Википедия:Запросы к патрулирующим от автоподтверждённых участников']
@@ -136,7 +129,7 @@ def main():
             page.save(summary)
 
 
-def test():
+def _test():
     d = ForumPageChangedStatus()
     page_text = """
 == <s>[[Когурё]]</s> ==
@@ -170,4 +163,4 @@ def test():
 
 if __name__ == '__main__':
     main()
-    # test()
+    # _test()

@@ -5,13 +5,12 @@ import re
 import pywikibot
 
 namespaces_excluded = r'(?:Special|Служебная|Участник|User|У|U|Обсуждение[ _]участника|User talk|ОУ|Википедия|ВП|Обсуждение[ _]Википедии|Обсуждение):'
-interwiki_prefix = r':?[a-z]+?:'
 closing_tpls = re.compile(r'\{\{([Оо]тпатрулировано|[Пп]атр|[Оо]тпат|[Сс]делано|[Dd]one|[Оо]тклонено)\s*(?:\|.*?)?\}\}')
 sections_re = re.compile(r'\n={2,}[^=]+={2,}\n.*?(?=\n={2,}[^=]+={2,}\n|$)', flags=re.DOTALL)
 clean_all_striked = re.compile(r'<s>.*?</s>', flags=re.DOTALL | re.I)  # Удаляем всё, что внутри <s> ... </s>
 # link_not_striked_re = re.compile(r'\s*(?<!<s>)\s*(\[\[(?!%s)(?!%s).*?\]\])' % (interwiki_prefix, namespaces_excluded), flags=re.I)  # не зачёркнутая ссылка
 link_title_re = re.compile(r'\[\[([^]|]+).*?\]\]')  # заголовок целевой страницы из ссылки
-link_re = re.compile(r'\s*(\[\[(?!%s)(?!%s).*?\]\])' % (interwiki_prefix, namespaces_excluded), flags=re.I)
+link_re = re.compile(r'\s*(\[\[(?!%s).*?\]\])' % namespaces_excluded, flags=re.I)
 
 
 class ForumPageChangedStatus:
@@ -27,12 +26,16 @@ s.headers = {'User-Agent': '[[w:ru:User:TextworkerBot]] / page revision checker'
 def get_pagesdata_from_api(titles: list[str]) -> dict | None:
     """ https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=flagged|info&utf8=1&titles=ЗАГЛАВИЕ  # или ЗАГЛАВИЕ1|ЗАГЛАВИЕ2 """
     params = {'action': 'query', 'prop': 'flagged|info', 'titles': '|'.join(titles), 'format': 'json', 'utf8': 1, }  # 'redirects': 1
-    r = s.get(url='https://ru.wikipedia.org/w/api.php', params=params)
-    j = r.json()['query'].get('pages').values()
-    if not j:
-        print("нет ['query']['pages'] в " + r.request.url)
+    response = s.get(url='https://ru.wikipedia.org/w/api.php', params=params)
+    query = response.json().get('query', {})
+    if not query or 'interwiki' in query:
+        print("нет ['query'] или есть 'interwiki' в " + response.request.url)
         return None
-    pages_info = {i['title']: i for i in j}
+    pages = query.get('pages').values()
+    if not pages:
+        print("нет ['query']['pages'] в " + response.request.url)
+        return None
+    pages_info = {page['title']: page for page in pages}
     return pages_info
 
 
@@ -132,21 +135,11 @@ def main():
 def _test():
     d = ForumPageChangedStatus()
     page_text = """
-== <s>[[Когурё]]</s> ==
+== [[Vogue: Глазами редактора]] ==
+новая статья — [[У:AllaBuraya|AllaBuraya]] ([[ОУ:AllaBuraya|обс.]]) 14:59, 21 января 2026 (UTC)
 
-47 правок. Статья в кошмарном состоянии с кучей ОРИСС без источников. Подтвердите пожалуйста мои правки чтобы я могла продолжить чистить от ОРИСС.  [[У:Ulianurlanova|Ulianurlanova]] ([[ОУ:Ulianurlanova|обс.]]) 02:04, 19 января 2022 (UTC)
-* {{Отказано}} Править можно и без подтверждения. А сейчас в статье куча проблем - такое не патрулируется. --[[У:EstherColeman|<span style="color:#000000;font-family:Segoe Script;">Esther Coleman</span>]] <sup>[[ОУ:EstherColeman|обс.]]</sup> 06:51, 19 января 2022 (UTC)
-
-== [[День пожарной охраны России]] ==
-22 правки. — [[Special:Contributions/2A00:1370:8186:BB3:A30C:5EA3:D6AA:40E6|2A00:1370:8186:BB3:A30C:5EA3:D6AA:40E6]] 21:07, 30 апреля 2025 (UTC)
-
-== [[Без обид]] ==
-2 правки. — [[Special:Contributions/2A02:2378:1192:85A8:0:0:0:1|2A02:2378:1192:85A8:0:0:0:1]] 16:42, 30 апреля 2025 (UTC)
-* {{Отпатрулировано}}. [[У:Ochota ta Wola|Ochota ta Wola]] ([[ОУ:Ochota ta Wola|обс.]]) 16:49, 30 апреля 2025 (UTC)
-
-== <s>[[Государственный переворот в Пруссии 1932 года]]</s> ==
-Создал статьи "Боксгеймские документы" и "Государственный переворот в Пруссии 1932 года" по аналогии с англоязычными версиями статей, немало добавил от себя— == — [[У:IStorik1991|IStorik1991]] ([[ОУ:IStorik1991|обс.]]) 20:11, 29 апреля 2025 (UTC)
-* {{Отпатрулировано}}. [[У:Ochota ta Wola|Ochota ta Wola]] ([[ОУ:Ochota ta Wola|обс.]]) 14:44, 30 апреля 2025 (UTC)
+== [[en:Vogue]] ==
+интервики — [[У:Petsernik|Petsernik]] ([[ОУ:Petsernik|обс.]]) 14:59, 72 мартобря 2326 (UTC)
     """
     sections = [s for s in sections_re.findall(page_text)]
     for section in sections:

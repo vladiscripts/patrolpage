@@ -14,10 +14,10 @@ link_title_re = re.compile(r'\[\[([^]|]+).*?\]\]')  # заголовок цел�
 link_re = re.compile(r'\s*(\[\[(?!%s).*?\]\])' % namespaces_excluded, flags=re.I)
 
 
+@dataclass
 class ForumPageChangedStatus:
-    def __init__(self):
-        self.is_patrolled_page_found = False
-        self.is_section_closed = False
+    is_patrolled_page_found = False
+    is_section_closed = False
 
 
 @dataclass

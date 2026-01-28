@@ -68,7 +68,8 @@ def links_to_dict_with_filter(wikilink_not_striked) -> dict[str, LinkData]:
     for wikilink in wikilink_not_striked:
         pwb_link = pwb.Link(link_title_re.match(wikilink).group(1))
         # фильтр пространств имён и интервик
-        if not pwb_link._is_interwiki and pwb_link.namespace.id not in [-1, 1, 2, 3, 4, 5]:
+        if ((not hasattr(pwb_link, '_is_interwiki') or not pwb_link._is_interwiki)
+                and pwb_link.namespace.id not in [-1, 1, 2, 3, 4, 5]):
             links[pwb_link.title] = LinkData(wikilink=wikilink, pwb_link=pwb_link)
     return links
 

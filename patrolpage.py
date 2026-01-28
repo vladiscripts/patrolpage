@@ -30,6 +30,8 @@ class LinkData:
 s = requests.Session()
 s.headers = {'User-Agent': '[[w:ru:User:TextworkerBot]] / page revision checker'}
 
+site = pwb.Site('ru', 'wikipedia', user='TextworkerBot')
+
 
 def get_pagesdata_from_api(links: dict[str, LinkData]) -> dict:
     """ https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=flagged|info&utf8=1&titles=ЗАГЛАВИЕ  # или ЗАГЛАВИЕ1|ЗАГЛАВИЕ2 """
@@ -66,7 +68,8 @@ def get_links_not_striked(text) -> list[str]:
 def links_to_dict_with_filter(wikilink_not_striked) -> dict[str, LinkData]:
     links = {}
     for wikilink in wikilink_not_striked:
-        pwb_link = pwb.Link(link_title_re.match(wikilink).group(1))
+        pwb_link = pwb.Link(link_title_re.match(wikilink).group(1), site)
+        pwb_link.parse()
         # фильтр пространств имён и интервик
         if not pwb_link._is_interwiki and pwb_link.namespace.id not in [-1, 1, 2, 3, 4, 5]:
             links[pwb_link.title] = LinkData(wikilink=wikilink, pwb_link=pwb_link)
@@ -109,7 +112,6 @@ def section_closing(d: ForumPageChangedStatus, section: str, redirects: set) -> 
 
 
 def main():
-    site = pwb.Site('ru', 'wikipedia', user='TextworkerBot')
     workpages = ['Википедия:Запросы к патрулирующим',
                  'Википедия:Запросы к патрулирующим от автоподтверждённых участников']
     for workpage in workpages:

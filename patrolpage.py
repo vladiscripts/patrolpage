@@ -78,18 +78,17 @@ def links_to_dict_with_filter(wikilink_not_striked) -> dict[str, LinkData]:
 
 def section_links_processing(d: ForumPageChangedStatus, section: str, redirects: set) -> tuple[ForumPageChangedStatus, str, set]:
     """ Проверка ссылок в разделе, зачёркивание """
-    wikilink_not_striked = get_links_not_striked(section)  # не зачёркнутые викиссылки
-    if wikilink_not_striked:
-        links = links_to_dict_with_filter(wikilink_not_striked)
-        links = get_pagesdata_from_api(links)
-        for title, link in links.items():
-            if is_page_patrolled(link.api_data):
-                # ссылка отпатрулирована, зачёркиваем
-                d.is_patrolled_page_found = True
-                section = section.replace(link.wikilink, f'<s>{link.wikilink}</s>')
-            if 'redirect' in link.api_data:
-                # ссылка является перенаправлением
-                redirects.add(title)
+    if wikilink_not_striked := get_links_not_striked(section):  # не зачёркнутые викиссылки:
+        if links_filtered := links_to_dict_with_filter(wikilink_not_striked):
+            links = get_pagesdata_from_api(links_filtered)
+            for title, link in links.items():
+                if is_page_patrolled(link.api_data):
+                    # ссылка отпатрулирована, зачёркиваем
+                    d.is_patrolled_page_found = True
+                    section = section.replace(link.wikilink, f'<s>{link.wikilink}</s>')
+                if 'redirect' in link.api_data:
+                    # ссылка является перенаправлением
+                    redirects.add(title)
     return d, section, redirects
 
 

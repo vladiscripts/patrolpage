@@ -71,8 +71,13 @@ def links_to_dict_with_filter(wikilink_not_striked) -> dict[str, LinkData]:
         pwb_link = pwb.Link(link_title_re.match(wikilink).group(1), site)
         pwb_link.parse()
         # фильтр пространств имён и интервик
-        if not pwb_link._is_interwiki and pwb_link.namespace.id not in [-1, 1, 2, 3, 4, 5]:
+        if pwb_link._is_interwiki:
+            continue
+        if pwb_link.namespace.id == 0:
             links[pwb_link.title] = LinkData(wikilink=wikilink, pwb_link=pwb_link)
+        elif pwb_link.namespace.id in [6, 10, 14]:
+            # правильный заголовок для файла/шаблона/категории
+            links[f'{pwb_link.namespace.custom_name}:{pwb_link.title}'] = LinkData(wikilink=wikilink, pwb_link=pwb_link)
     return links
 
 
@@ -140,6 +145,12 @@ def main():
 def _test():
     d = ForumPageChangedStatus()
     page_text = """
+== [[Шаблон:Германские племена]] ==
+Неотпатрулированный шаблон
+Отпатрулированная категория: [[Категория:Литература народов России]]
+Отпатрулированный файл: [[Файл:Spiderman2.jpg]]
+([[ОУ:Petsernik|обс.]]) 15:05, 72 мартобря 2326 (UTC)
+
 == [[en:Vogue]] ==
 [[   Vogue: Глазами редактора  | werwrwrwr ]] 
 интервики — [[У:Petsernik|Petsernik]] ([[ОУ:Petsernik|обс.]]) 14:59, 72 мартобря 2326 (UTC)

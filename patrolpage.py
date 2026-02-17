@@ -21,7 +21,7 @@ class ForumPageChangedStatus:
 
 
 @dataclass
-class LinkData:
+class Link:
     wikilink: str
     pwb_link: pwb.Link
     api_data: dict | None = None
@@ -33,17 +33,17 @@ s.headers = {'User-Agent': '[[w:ru:User:TextworkerBot]] / page revision checker'
 site = pwb.Site('ru', 'wikipedia', user='TextworkerBot')
 
 
-def get_pagesdata_from_api(links: dict[str, LinkData]) -> dict:
+def get_pagesdata_from_api(links: dict[str, Link]) -> dict:
     """ https://ru.wikipedia.org/w/api.php?action=query&format=json&prop=flagged|info&utf8=1&titles=ЗАГЛАВИЕ  # или ЗАГЛАВИЕ1|ЗАГЛАВИЕ2 """
     params = {'action': 'query', 'prop': 'flagged|info', 'titles': '|'.join(links.keys()), 'format': 'json', 'utf8': 1, }  # 'redirects': 1
     r = s.get(url='https://ru.wikipedia.org/w/api.php', params=params)
-    j = r.json()['query'].get('pages').values()
-    if not j:
+    api_pages = r.json()['query'].get('pages')
+    if not api_pages:
         print(f"нет ['query']['pages'] в {r.request.url}")
         return {}
-    for p in j:
-        if link_data := links.get(p['title']):
-            link_data.api_data = p
+    for p in api_pages.values():
+        if link := links.get(p['title']):
+            link.api_data = p
         else:
             print(f'не найден title "{p["title"]}" в {r.request.url}')
     return links
@@ -65,25 +65,24 @@ def get_links_not_striked(text) -> list[str]:
     return links
 
 
-def links_to_dict_with_filter(wikilink_not_striked) -> dict[str, LinkData]:
+def links_to_dict_with_filter(wikilink_not_striked) -> dict[str, Link]:
+    """ Сборка ссылок в словарь, с отфильтровкой интервик и пространств имён. """
     links = {}
     for wikilink in wikilink_not_striked:
         pwb_link = pwb.Link(link_title_re.match(wikilink).group(1), site)
         pwb_link.parse()
-        # фильтр пространств имён и интервик
         if pwb_link._is_interwiki:
             continue
         if pwb_link.namespace.id == 0:
-            links[pwb_link.title] = LinkData(wikilink=wikilink, pwb_link=pwb_link)
+            links[pwb_link.title] = Link(wikilink=wikilink, pwb_link=pwb_link)
         elif pwb_link.namespace.id in [6, 10, 14]:
-            # правильный заголовок для файла/шаблона/категории
-            links[f'{pwb_link.namespace.custom_name}:{pwb_link.title}'] = LinkData(wikilink=wikilink, pwb_link=pwb_link)
+            links[f'{pwb_link.namespace.custom_name}:{pwb_link.title}'] = Link(wikilink=wikilink, pwb_link=pwb_link)
     return links
 
 
 def section_links_processing(d: ForumPageChangedStatus, section: str, redirects: set) -> tuple[ForumPageChangedStatus, str, set]:
     """ Проверка ссылок в разделе, зачёркивание """
-    if wikilink_not_striked := get_links_not_striked(section):  # не зачёркнутые викиссылки:
+    if wikilink_not_striked := get_links_not_striked(section):  # не зачёркнутые викиссылки
         if links_filtered := links_to_dict_with_filter(wikilink_not_striked):
             links = get_pagesdata_from_api(links_filtered)
             for title, link in links.items():
